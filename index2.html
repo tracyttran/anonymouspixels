@@ -1,0 +1,97 @@
+<html>
+
+<head>
+    <script type="text/javascript" src="processing.js"></script>
+    <script type="text/javascript" src="jquery-3.2.1.js"></script>
+    <title>Anonymous Pixels</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1 style="font-family:Arial;">Anonymous Pixels</h1>
+    <p>
+        Select a grid cell, move the sliders on the right to set the color, then click "Submit Color" to paint the cell.
+        <br> The catch? The canvas is shared by everyone on the internet. Inspired by Reddit's <a href="http://sudoscript.com/reddit-place/">r/place</a>.
+        <br> Click "Connect to Canvas" to begin. To be continued...in physical form?
+    </p>
+    <button type="button" onclick="bindJavascript();" style="width:200px;height:50px;background-color: #4CAF50">Connect to Canvas</button>
+    <hr>
+    <canvas id="processing_grid" style='width:500px;height:500px' data-processing-sources="processing_grid.pde"></canvas>
+
+    <script type="text/javascript">
+        var bound = false;
+
+        function bindJavascript() {
+            var pjs = Processing.getInstanceById('processing_grid');
+            if (pjs != null) {
+                pjs.bindJavascript(this);
+                bound = true;
+            }
+        }
+
+        // called by processing sketch to update its data
+        function updateData() {
+            httpGetAsync('http://students.washington.edu/tracyt28/grid_endpoints.php?method=getData&format=json',
+                getDataCallback);
+        }
+
+        // used by server to set cell in ui 
+        function setCellUI(col, row, r, g, b) {
+            var pjs = Processing.getInstanceById('processing_grid');
+            pjs.setColor(col, row, r, g, b);
+        }
+
+        function httpGetAsync(theUrl, callback) {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function () {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+                    callback(xmlHttp.responseText);
+            }
+            xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+            xmlHttp.send(null);
+        }
+
+        function getDataCallback(response) {
+            var obj = JSON.parse(response);
+            var data_arr = obj.data;
+
+            for (var i = 0; i < data_arr.length; i++) {
+                var cell = data_arr[i];
+                var col = cell.col;
+                var row = cell.row;
+                var red = cell.red;
+                var green = cell.green;
+                var blue = cell.blue;
+
+                setCellUI(col, row, red, green, blue);
+            }
+
+        }
+
+        // used by ui to set cell in server databse
+        function setCellDB(col, row, red, green, blue) {
+            var result = "http://students.washington.edu/tracyt28/grid_endpoints.php?method=postData&red=";
+            result = result.concat(red);
+            result = result.concat("&green=");
+            result = result.concat(green);
+            result = result.concat("&blue=");
+            result = result.concat(blue);
+            result = result.concat("&key=(");
+            result = result.concat(col);
+            result = result.concat(",");
+            result = result.concat(row);
+            result = result.concat(")&format=json");
+
+            httpGetAsync(result, setDataCallback);
+        }
+
+        function setDataCallback(response) {}
+    </script>
+</body>
+
+</html>
